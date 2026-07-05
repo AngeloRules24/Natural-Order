@@ -1,0 +1,1925 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Food Chain Sorter</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        background: #0a0f1e;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        overflow: hidden;
+        width: 100vw;
+        height: 100vh;
+        user-select: none;
+      }
+      canvas {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 0;
+        touch-action: none;
+      }
+
+      #ui-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .screen {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        padding: 24px;
+        pointer-events: auto;
+        overflow-y: auto;
+      }
+      .screen.active {
+        display: flex;
+      }
+
+      .game-logo {
+        font-size: 46px;
+        font-weight: 900;
+        letter-spacing: -1.5px;
+        line-height: 1.05;
+        text-align: center;
+        background: linear-gradient(135deg, #4ade80, #22d3ee, #818cf8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 6px;
+      }
+      .game-subtitle {
+        color: #64748b;
+        font-size: 13px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        margin-bottom: 14px;
+        text-align: center;
+      }
+      .btn {
+        padding: 13px 38px;
+        border-radius: 50px;
+        font-size: 16px;
+        font-weight: 700;
+        border: none;
+        cursor: pointer;
+        letter-spacing: 0.5px;
+        transition:
+          transform 0.15s,
+          box-shadow 0.15s;
+      }
+      .btn:hover {
+        transform: scale(1.05);
+      }
+      .btn:active {
+        transform: scale(0.97);
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, #4ade80, #22d3ee);
+        color: #0a0f1e;
+        box-shadow: 0 4px 20px rgba(74, 222, 128, 0.35);
+      }
+      .btn-secondary {
+        background: transparent;
+        color: #64748b;
+        border: 1px solid rgba(100, 116, 139, 0.35);
+        padding: 10px 28px;
+        font-size: 14px;
+      }
+      .btn-secondary:hover {
+        border-color: #4ade80;
+        color: #4ade80;
+      }
+
+      #start-screen,
+      #instructions-screen,
+      #end-screen,
+      #gameover-screen {
+        background: rgba(10, 15, 30, 0.96);
+        gap: 14px;
+      }
+
+      .instructions-title {
+        font-size: 26px;
+        font-weight: 800;
+        color: #f1f5f9;
+        margin-bottom: 2px;
+        text-align: center;
+      }
+      .instr-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        max-width: 600px;
+        width: 100%;
+      }
+      .instr-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 14px;
+        padding: 15px;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+      }
+      .instr-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 19px;
+        flex-shrink: 0;
+      }
+      .ic-green {
+        background: rgba(74, 222, 128, 0.15);
+      }
+      .ic-cyan {
+        background: rgba(34, 211, 238, 0.15);
+      }
+      .ic-indigo {
+        background: rgba(129, 140, 248, 0.15);
+      }
+      .ic-amber {
+        background: rgba(251, 191, 36, 0.15);
+      }
+      .instr-card h3 {
+        color: #e2e8f0;
+        font-size: 13px;
+        font-weight: 700;
+        margin-bottom: 3px;
+      }
+      .instr-card p {
+        color: #64748b;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+      .instr-btns {
+        display: flex;
+        gap: 12px;
+        margin-top: 4px;
+      }
+
+      .round-plan {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        justify-content: center;
+        max-width: 600px;
+      }
+      .round-chip {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        padding: 4px 10px;
+        color: #94a3b8;
+        font-size: 10.5px;
+      }
+
+      /* HUD */
+      #hud {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 22px;
+        z-index: 5;
+        pointer-events: none;
+      }
+      #hud.active {
+        display: flex;
+      }
+      .hud-group {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .hud-stat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .hud-lbl {
+        font-size: 9px;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      .hud-val {
+        font-size: 17px;
+        font-weight: 800;
+        color: #f1f5f9;
+      }
+      .hud-lives {
+        display: flex;
+        gap: 3px;
+      }
+      .heart {
+        font-size: 18px;
+        transition: transform 0.2s;
+      }
+      .heart.lost {
+        opacity: 0.2;
+        transform: scale(0.8);
+      }
+      .round-pill {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 50px;
+        padding: 6px 18px;
+        font-size: 13px;
+        font-weight: 700;
+        color: #e2e8f0;
+      }
+
+      #combo-display {
+        position: fixed;
+        top: 62px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        z-index: 6;
+        pointer-events: none;
+      }
+      #combo-display.active {
+        display: flex;
+      }
+      .combo-label {
+        font-size: 10px;
+        color: #4ade80;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+      .combo-val {
+        font-size: 22px;
+        font-weight: 900;
+        color: #4ade80;
+        text-shadow: 0 0 14px rgba(74, 222, 128, 0.6);
+        transition: transform 0.15s;
+      }
+
+      #eco-banner {
+        position: fixed;
+        top: 68px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: none;
+        align-items: center;
+        gap: 10px;
+        background: rgba(10, 15, 30, 0.92);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 50px;
+        padding: 10px 24px;
+        z-index: 8;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.4s;
+      }
+      #eco-banner.active {
+        display: flex;
+      }
+      #eco-banner.show {
+        opacity: 1;
+      }
+      .eco-emoji {
+        font-size: 20px;
+      }
+      .eco-text {
+        display: flex;
+        flex-direction: column;
+      }
+      .eco-name {
+        font-size: 13px;
+        font-weight: 800;
+        color: #f1f5f9;
+      }
+      .eco-fact {
+        font-size: 10.5px;
+        color: #94a3b8;
+        max-width: 340px;
+      }
+
+      #timer-bar-wrap {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.05);
+        z-index: 7;
+        display: none;
+      }
+      #timer-bar-wrap.active {
+        display: block;
+      }
+      #timer-bar {
+        height: 100%;
+        width: 100%;
+        background: linear-gradient(90deg, #4ade80, #22d3ee);
+        transition: width 0.1s linear;
+      }
+      #timer-bar.warn {
+        background: linear-gradient(90deg, #fbbf24, #f97316);
+      }
+      #timer-bar.danger {
+        background: linear-gradient(90deg, #f87171, #ef4444);
+      }
+
+      #pause-btn {
+        position: fixed;
+        bottom: 18px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: #cbd5e1;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 8px 16px;
+        border-radius: 50px;
+        cursor: pointer;
+        z-index: 20;
+        display: none;
+        pointer-events: auto;
+      }
+      #pause-btn.active {
+        display: block;
+      }
+      #pause-btn:hover {
+        background: rgba(255, 255, 255, 0.12);
+      }
+
+      /* Pause overlay */
+      #pause-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(5, 8, 16, 0.85);
+        backdrop-filter: blur(6px);
+        z-index: 30;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 16px;
+      }
+      #pause-overlay.active {
+        display: flex;
+      }
+      .pause-title {
+        font-size: 28px;
+        font-weight: 900;
+        color: #f1f5f9;
+      }
+      .pause-btns {
+        display: flex;
+        gap: 12px;
+        margin-top: 6px;
+      }
+
+      /* Info popup for a placed organism card */
+      #info-popup {
+        position: fixed;
+        font-size: 30;
+        bottom: 26px;
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        max-width: 360px;
+        width: calc(100% - 40px);
+        background: rgba(10, 15, 30, 0.97);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 16px;
+        padding: 16px 18px;
+        z-index: 25;
+        opacity: 0;
+        pointer-events: none;
+        transition:
+          opacity 0.2s,
+          transform 0.2s;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      #info-popup.active {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+        pointer-events: auto;
+      }
+      #info-popup img {
+        width: 54px;
+        height: 54px;
+        border-radius: 10px;
+        object-fit: cover;
+        flex-shrink: 0;
+      }
+      #info-popup .info-emoji {
+        font-size: 34px;
+        flex-shrink: 0;
+        width: 54px;
+        text-align: center;
+      }
+      #info-popup .info-body h4 {
+        color: #f1f5f9;
+        font-size: 14px;
+        margin-bottom: 3px;
+      }
+      #info-popup .info-body p {
+        color: #94a3b8;
+        font-size: 11.5px;
+        line-height: 1.45;
+      }
+      #info-popup .info-close {
+        position: absolute;
+        top: 8px;
+        right: 10px;
+        color: #475569;
+        font-size: 14px;
+        cursor: pointer;
+        pointer-events: auto;
+      }
+
+      .end-title {
+        font-size: 32px;
+        font-weight: 900;
+        color: #f1f5f9;
+        text-align: center;
+      }
+      .end-subtitle {
+        color: #64748b;
+        font-size: 14px;
+        text-align: center;
+        margin-bottom: 4px;
+      }
+      .stars-row {
+        display: flex;
+        gap: 8px;
+        margin: 4px 0;
+      }
+      .star-icon {
+        font-size: 40px;
+        opacity: 0.25;
+        transition:
+          opacity 0.3s,
+          transform 0.3s;
+        transform: scale(0.7);
+      }
+      .star-icon.lit {
+        opacity: 1;
+        transform: scale(1);
+        filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.6));
+      }
+      .end-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        max-width: 420px;
+        width: 100%;
+      }
+      .end-stat {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 12px;
+        text-align: center;
+      }
+      .end-stat-lbl {
+        font-size: 9.5px;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 4px;
+      }
+      .end-stat-val {
+        font-size: 19px;
+        font-weight: 800;
+        color: #f1f5f9;
+      }
+      .end-btns {
+        display: flex;
+        gap: 12px;
+        margin-top: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="game-canvas"></canvas>
+
+    <div id="ui-overlay">
+      <!-- START -->
+      <div id="start-screen" class="screen active">
+        <div class="game-logo">🔗 Food Chain Sorter</div>
+        <div class="game-subtitle">Drag &amp; Sort · 10 Ecosystems</div>
+        <div class="round-plan" id="round-plan"></div>
+        <button class="btn btn-primary" onclick="startGame()">
+          Start Game
+        </button>
+        <button
+          class="btn btn-secondary"
+          onclick="showScreen('instructions-screen')"
+        >
+          How to Play
+        </button>
+        <button
+          class="btn btn-secondary"
+          id="continue-btn"
+          style="display: none"
+          onclick="continueGame()"
+        >
+          Continue Saved Game
+        </button>
+      </div>
+
+      <!-- INSTRUCTIONS -->
+      <div id="instructions-screen" class="screen">
+        <div class="instructions-title">🔗 How to Sort a Food Chain</div>
+        <div class="instr-grid">
+          <div class="instr-card">
+            <div class="instr-icon ic-green">🖐️</div>
+            <div>
+              <h3>Drag Into Order</h3>
+              <p>
+                Drag each organism card into the empty slot where it belongs —
+                from producer all the way to apex predator.
+              </p>
+            </div>
+          </div>
+          <div class="instr-card">
+            <div class="instr-icon ic-cyan">⚡</div>
+            <div>
+              <h3>Energy Flows One Way</h3>
+              <p>
+                Producers make their own energy from sunlight. Every link after
+                that eats the one before it, ending at the apex predator.
+              </p>
+            </div>
+          </div>
+          <div class="instr-card">
+            <div class="instr-icon ic-indigo">🔥</div>
+            <div>
+              <h3>Build a Combo</h3>
+              <p>
+                Correct placements in a row build a combo streak for bonus
+                points. A wrong slot resets your streak and costs a life.
+              </p>
+            </div>
+          </div>
+          <div class="instr-card">
+            <div class="instr-icon ic-amber">🌍</div>
+            <div>
+              <h3>10 Real Ecosystems</h3>
+              <p>
+                Chains get longer as you go — grassland and ocean early on, all
+                the way to a 6-link savanna and a final round with two chains at
+                once.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="instr-btns">
+          <button
+            class="btn btn-secondary"
+            onclick="showScreen('start-screen')"
+          >
+            Back
+          </button>
+          <button class="btn btn-primary" onclick="startGame()">
+            Let's Go
+          </button>
+        </div>
+      </div>
+
+      <!-- END (victory) -->
+      <div id="end-screen" class="screen">
+        <div class="end-title">🏆 Ecosystem Master!</div>
+        <div class="end-subtitle">You sorted every food chain.</div>
+        <div class="stars-row">
+          <span class="star-icon" id="star1">⭐</span>
+          <span class="star-icon" id="star2">⭐</span>
+          <span class="star-icon" id="star3">⭐</span>
+        </div>
+        <div class="end-stats">
+          <div class="end-stat">
+            <div class="end-stat-lbl">Score</div>
+            <div class="end-stat-val" id="end-score">0</div>
+          </div>
+          <div class="end-stat">
+            <div class="end-stat-lbl">Best Combo</div>
+            <div class="end-stat-val" id="end-combo">x0</div>
+          </div>
+          <div class="end-stat">
+            <div class="end-stat-lbl">Mistakes</div>
+            <div class="end-stat-val" id="end-mistakes">0</div>
+          </div>
+        </div>
+        <div class="end-btns">
+          <button class="btn btn-secondary" onclick="resetToStart()">
+            Main Menu
+          </button>
+          <button class="btn btn-primary" onclick="startGame()">
+            Play Again
+          </button>
+        </div>
+      </div>
+
+      <!-- GAME OVER -->
+      <div id="gameover-screen" class="screen">
+        <div class="end-title">💔 Out of Lives</div>
+        <div class="end-subtitle" id="gameover-sub">
+          You made it to Round 1.
+        </div>
+        <div class="end-stats">
+          <div class="end-stat">
+            <div class="end-stat-lbl">Score</div>
+            <div class="end-stat-val" id="go-score">0</div>
+          </div>
+          <div class="end-stat">
+            <div class="end-stat-lbl">Best Combo</div>
+            <div class="end-stat-val" id="go-combo">x0</div>
+          </div>
+          <div class="end-stat">
+            <div class="end-stat-lbl">Round Reached</div>
+            <div class="end-stat-val" id="go-round">1</div>
+          </div>
+        </div>
+        <div class="end-btns">
+          <button class="btn btn-secondary" onclick="resetToStart()">
+            Main Menu
+          </button>
+          <button class="btn btn-primary" onclick="startGame()">
+            Try Again
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud">
+      <div class="hud-group">
+        <div class="hud-stat">
+          <div class="hud-lbl">Lives</div>
+          <div class="hud-lives" id="hud-lives">
+            <span class="heart">❤️</span><span class="heart">❤️</span
+            ><span class="heart">❤️</span>
+          </div>
+        </div>
+      </div>
+      <div class="round-pill" id="hud-round">Round 1 / 10</div>
+      <div class="hud-group">
+        <div class="hud-stat">
+          <div class="hud-lbl">Score</div>
+          <div class="hud-val" id="hud-score">0</div>
+        </div>
+      </div>
+    </div>
+    <div id="combo-display">
+      <div class="combo-label">Combo</div>
+      <div class="combo-val" id="combo-val">x0</div>
+    </div>
+    <div id="eco-banner">
+      <div class="eco-emoji" id="eco-emoji">🌾</div>
+      <div class="eco-text">
+        <div class="eco-name" id="eco-name">Grassland</div>
+        <div class="eco-fact" id="eco-fact">Sort producer → apex predator</div>
+      </div>
+    </div>
+    <div id="timer-bar-wrap"><div id="timer-bar"></div></div>
+    <button id="pause-btn" onclick="togglePause()">⏸ Pause</button>
+
+    <div id="pause-overlay">
+      <div class="pause-title">⏸ Paused</div>
+      <div class="pause-btns">
+        <button class="btn btn-primary" onclick="togglePause()">Resume</button>
+        <button class="btn btn-secondary" onclick="resetToStart()">Exit</button>
+      </div>
+    </div>
+
+    <div id="info-popup">
+      <span class="info-close" onclick="hideInfoPopup()">✕</span>
+      <div class="info-emoji" id="info-emoji">🌾</div>
+      <img id="info-img" style="display: none" />
+      <div class="info-body">
+        <h4 id="info-name">Grass</h4>
+        <p id="info-fact">A fun fact will appear here.</p>
+      </div>
+    </div>
+
+    <script>
+      // ══════════════════════════════════════════════════════════
+      //  FOOD CHAIN SORTER
+      //  Canvas drag-and-sort game · 10 ecosystem rounds
+      // ══════════════════════════════════════════════════════════
+
+      const canvas = document.getElementById("game-canvas");
+      const ctx = canvas.getContext("2d");
+      const SAVE_KEY = "foodChainSorterSave";
+      const TOTAL_ROUNDS = 10;
+      const CARD_W = 124,
+        CARD_H = 92;
+      const TIMER_GRACE = 15; // seconds granted back after a timeout life loss
+
+      // ── AUDIO (Web Audio API) ───────────────────────────────
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      function tone(freq, dur, type, gain, delay) {
+        delay = delay || 0;
+        const t0 = audioCtx.currentTime + delay;
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = type || "sine";
+        osc.frequency.setValueAtTime(freq, t0);
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(gain || 0.2, t0 + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        osc.connect(g);
+        g.connect(audioCtx.destination);
+        osc.start(t0);
+        osc.stop(t0 + dur + 0.02);
+      }
+      function playSound(name) {
+        try {
+          switch (name) {
+            case "pick":
+              tone(420, 0.08, "triangle", 0.12);
+              break;
+            case "correct":
+              tone(523, 0.1, "sine", 0.18);
+              tone(784, 0.14, "sine", 0.14, 0.06);
+              break;
+            case "wrong":
+              tone(180, 0.22, "sawtooth", 0.16);
+              break;
+            case "win":
+              tone(523, 0.12, "sine", 0.16);
+              tone(659, 0.12, "sine", 0.16, 0.1);
+              tone(880, 0.22, "sine", 0.18, 0.2);
+              break;
+            case "lose":
+              tone(300, 0.3, "sawtooth", 0.15);
+              tone(180, 0.4, "sawtooth", 0.15, 0.15);
+              break;
+            case "combo":
+              tone(660 + Math.random() * 200, 0.1, "square", 0.1);
+              break;
+          }
+        } catch (e) {}
+      }
+
+      // ── ECOSYSTEM DATA (asset: enriched at runtime, see fetchEcosystemData) ──
+      const ECOSYSTEMS = [
+        {
+          id: "grassland",
+          name: "Grassland",
+          emoji: "🌾",
+          accent: "#84cc16",
+          bg: ["#1a2e12", "#0d1b0a"],
+          organisms: [
+            {
+              name: "Grass",
+              emoji: "🌾",
+              fact: "Grass turns sunlight into energy through photosynthesis.",
+            },
+            {
+              name: "Rabbit",
+              emoji: "🐇",
+              fact: "Rabbits re-digest their own droppings to absorb more nutrients.",
+            },
+            {
+              name: "Fox",
+              emoji: "🦊",
+              fact: "Foxes may use Earth's magnetic field to help pounce on prey.",
+            },
+          ],
+        },
+        {
+          id: "ocean",
+          name: "Ocean",
+          emoji: "🌊",
+          accent: "#0ea5e9",
+          bg: ["#0a2540", "#051222"],
+          organisms: [
+            {
+              name: "Phytoplankton",
+              emoji: "🟢",
+              fact: "Phytoplankton produce roughly half of the world's oxygen.",
+            },
+            {
+              name: "Small Fish",
+              emoji: "🐟",
+              fact: "Schooling fish move as one to confuse predators.",
+            },
+            {
+              name: "Seal",
+              emoji: "🦭",
+              fact: "Seals can slow their heart rate to dive for 20+ minutes.",
+            },
+            {
+              name: "Shark",
+              emoji: "🦈",
+              fact: "Sharks have existed for over 400 million years.",
+            },
+          ],
+        },
+        {
+          id: "rainforest",
+          name: "Rainforest",
+          emoji: "🌳",
+          accent: "#16a34a",
+          bg: ["#0f2a17", "#06150c"],
+          organisms: [
+            {
+              name: "Leaves",
+              emoji: "🍃",
+              fact: "Rainforest leaves grow 'drip tips' to shed heavy rainfall fast.",
+            },
+            {
+              name: "Monkey",
+              emoji: "🐒",
+              fact: "Many rainforest monkeys use their tail like a fifth hand.",
+            },
+            {
+              name: "Snake",
+              emoji: "🐍",
+              fact: "Some rainforest snakes sense prey through heat-sensing pits.",
+            },
+            {
+              name: "Jaguar",
+              emoji: "🐆",
+              fact: "Jaguars have the strongest bite of any big cat.",
+            },
+          ],
+        },
+        {
+          id: "arctic",
+          name: "Arctic",
+          emoji: "❄️",
+          accent: "#38bdf8",
+          bg: ["#0b2436", "#051018"],
+          organisms: [
+            {
+              name: "Algae",
+              emoji: "🧊",
+              fact: "Ice algae grow on the underside of Arctic sea ice.",
+            },
+            {
+              name: "Krill",
+              emoji: "🦐",
+              fact: "Krill swarms are sometimes large enough to see from space.",
+            },
+            {
+              name: "Arctic Fish",
+              emoji: "🐟",
+              fact: "Some Arctic fish have a natural antifreeze protein in their blood.",
+            },
+            {
+              name: "Seal",
+              emoji: "🦭",
+              fact: "Ringed seals carve breathing holes through thick sea ice.",
+            },
+            {
+              name: "Polar Bear",
+              emoji: "🐻‍❄️",
+              fact: "A polar bear's skin is actually black under its white fur.",
+            },
+          ],
+        },
+        {
+          id: "desert",
+          name: "Desert",
+          emoji: "🏜️",
+          accent: "#f59e0b",
+          bg: ["#2a1a05", "#160d02"],
+          organisms: [
+            {
+              name: "Cactus",
+              emoji: "🌵",
+              fact: "Cacti store water in thick stems to survive months of drought.",
+            },
+            {
+              name: "Grasshopper",
+              emoji: "🦗",
+              fact: "Desert grasshoppers can jump over 20 times their body length.",
+            },
+            {
+              name: "Lizard",
+              emoji: "🦎",
+              fact: "Some desert lizards lift their feet to cool them on hot sand.",
+            },
+            {
+              name: "Roadrunner",
+              emoji: "🐦",
+              fact: "Roadrunners can sprint close to 20 miles per hour.",
+            },
+            {
+              name: "Coyote",
+              emoji: "🐺",
+              fact: "Coyotes can hear a mouse squeak from about 100 feet away.",
+            },
+          ],
+        },
+        {
+          id: "freshwater",
+          name: "Freshwater",
+          emoji: "💧",
+          accent: "#22d3ee",
+          bg: ["#082a2e", "#031315"],
+          organisms: [
+            {
+              name: "Algae",
+              emoji: "🟢",
+              fact: "Freshwater algae form the base of nearly every pond food web.",
+            },
+            {
+              name: "Mayfly Larva",
+              emoji: "🦟",
+              fact: "Mayflies spend most of their life underwater as larvae.",
+            },
+            {
+              name: "Minnow",
+              emoji: "🐟",
+              fact: "Minnows swim in tight schools to help avoid predators.",
+            },
+            {
+              name: "Bass",
+              emoji: "🐠",
+              fact: "Bass detect vibrations in water with a lateral line organ.",
+            },
+            {
+              name: "Heron",
+              emoji: "🐦",
+              fact: "Herons stand motionless for minutes before striking prey.",
+            },
+          ],
+        },
+        {
+          id: "savanna",
+          name: "Savanna",
+          emoji: "🦁",
+          accent: "#eab308",
+          bg: ["#2e2205", "#160f02"],
+          organisms: [
+            {
+              name: "Grass",
+              emoji: "🌾",
+              fact: "Savanna grasses regrow quickly after fires and grazing.",
+            },
+            {
+              name: "Grasshopper",
+              emoji: "🦗",
+              fact: "A swarm of locusts can eat their body weight in food daily.",
+            },
+            {
+              name: "Mouse",
+              emoji: "🐭",
+              fact: "Savanna mice dig burrows to escape the intense midday heat.",
+            },
+            {
+              name: "Snake",
+              emoji: "🐍",
+              fact: "Many savanna snakes track prey by flicking their tongue.",
+            },
+            {
+              name: "Hawk",
+              emoji: "🦅",
+              fact: "Hawks can spot small prey from hundreds of feet in the air.",
+            },
+            {
+              name: "Lion",
+              emoji: "🦁",
+              fact: "A lion's roar can be heard from up to 5 miles away.",
+            },
+          ],
+        },
+        {
+          id: "deepocean",
+          name: "Deep Ocean",
+          emoji: "🌑",
+          accent: "#6366f1",
+          bg: ["#0a0a2e", "#040415"],
+          organisms: [
+            {
+              name: "Marine Snow",
+              emoji: "❄️",
+              fact: "Marine snow is a steady drift of organic debris from above.",
+            },
+            {
+              name: "Copepod",
+              emoji: "🦐",
+              fact: "Copepods may be the most abundant animals on Earth.",
+            },
+            {
+              name: "Lanternfish",
+              emoji: "🐟",
+              fact: "Lanternfish glow using light organs called photophores.",
+            },
+            {
+              name: "Squid",
+              emoji: "🦑",
+              fact: "Deep-sea squid can change color instantly to hide or signal.",
+            },
+            {
+              name: "Anglerfish",
+              emoji: "🐡",
+              fact: "Anglerfish lure prey with a glowing rod on their head.",
+            },
+            {
+              name: "Sperm Whale",
+              emoji: "🐋",
+              fact: "Sperm whales can dive over 2,000 metres hunting giant squid.",
+            },
+          ],
+        },
+        {
+          id: "temperate",
+          name: "Temperate Forest",
+          emoji: "🍂",
+          accent: "#a16207",
+          bg: ["#1c1505", "#0d0a02"],
+          organisms: [
+            {
+              name: "Leaves",
+              emoji: "🍃",
+              fact: "Forest leaves change color in fall as chlorophyll breaks down.",
+            },
+            {
+              name: "Caterpillar",
+              emoji: "🐛",
+              fact: "Caterpillars can eat several times their own body weight daily.",
+            },
+            {
+              name: "Sparrow",
+              emoji: "🐦",
+              fact: "Sparrows feed their chicks hundreds of caterpillars.",
+            },
+            {
+              name: "Fox",
+              emoji: "🦊",
+              fact: "Forest foxes cache extra food by burying it for later.",
+            },
+            {
+              name: "Owl",
+              emoji: "🦉",
+              fact: "Owls can rotate their heads up to 270 degrees.",
+            },
+            {
+              name: "Wolf",
+              emoji: "🐺",
+              fact: "Wolves communicate across long distances using howls.",
+            },
+          ],
+        },
+      ];
+      // Round 10: two ecosystems sorted simultaneously
+      const MIXED_ROUND = [ECOSYSTEMS[6], ECOSYSTEMS[7]]; // Savanna + Deep Ocean
+
+      // ── LIVE ASSET ENRICHMENT (Wikipedia REST API) ──────────
+      // Adds a real short summary + photo to each organism when available.
+      // The game is fully playable on the bundled facts above if this fails.
+      const ORGANISM_INFO = {};
+      async function fetchEcosystemData() {
+        const names = new Set();
+        ECOSYSTEMS.forEach((eco) =>
+          eco.organisms.forEach((o) => names.add(o.name)),
+        );
+        const jobs = [...names].map(async (name) => {
+          try {
+            const res = await fetch(
+              `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(
+                name,
+              )}`,
+            );
+            if (!res.ok) return;
+            const data = await res.json();
+            ORGANISM_INFO[name] = {
+              fact:
+                data.extract && data.extract.length > 20 ?
+                  data.extract.split(". ").slice(0, 2).join(". ") + "."
+                : null,
+              img: data.thumbnail ? data.thumbnail.source : null,
+            };
+          } catch (e) {
+            // silent fallback — bundled fact/emoji already covers this organism
+          }
+        });
+        await Promise.allSettled(jobs);
+        console.log(
+          `✅ Enriched ${Object.keys(ORGANISM_INFO).length}/${names.size} organisms from Wikipedia`,
+        );
+      }
+
+      function tierLabel(index, total) {
+        if (index === 0) return "Producer";
+        if (index === total - 1) return "Apex Predator";
+        const mid = [
+          "Primary",
+          "Secondary",
+          "Tertiary",
+          "Quaternary",
+          "Quinary",
+        ];
+        return mid[index - 1] + " Consumer";
+      }
+
+      // ── GAME STATE ───────────────────────────────────────────
+      const G = {
+        screen: "start",
+        round: 1,
+        lives: 3,
+        score: 0,
+        combo: 0,
+        bestCombo: 0,
+        mistakes: 0,
+        timer: 0,
+        timerMax: 1,
+        timerAccum: 0,
+        paused: false,
+        roundOver: false,
+        previewing: false,
+        ecosystems: [], // [eco] or [ecoA, ecoB] for the mixed round
+        slots: [],
+        tray: [],
+        dragCard: null,
+        dragOffX: 0,
+        dragOffY: 0,
+        particles: [],
+        screenShake: 0,
+        vw: window.innerWidth,
+        vh: window.innerHeight,
+        dpr: Math.min(2, window.devicePixelRatio || 1),
+        lastTime: 0,
+      };
+
+      // ── CANVAS SETUP ─────────────────────────────────────────
+      function resize() {
+        G.vw = window.innerWidth;
+        G.vh = window.innerHeight;
+        G.dpr = Math.min(2, window.devicePixelRatio || 1);
+        canvas.width = G.vw * G.dpr;
+        canvas.height = G.vh * G.dpr;
+        canvas.style.width = G.vw + "px";
+        canvas.style.height = G.vh + "px";
+        ctx.setTransform(G.dpr, 0, 0, G.dpr, 0, 0);
+        if (G.screen === "game") layoutRound();
+      }
+      window.addEventListener("resize", resize);
+
+      // ── SCREEN / UI HELPERS ──────────────────────────────────
+      function showScreen(id) {
+        document
+          .querySelectorAll(".screen")
+          .forEach((s) => s.classList.remove("active"));
+        hideGameUI();
+        const el = document.getElementById(id);
+        if (el) el.classList.add("active");
+      }
+      function hideGameUI() {
+        [
+          "hud",
+          "combo-display",
+          "eco-banner",
+          "timer-bar-wrap",
+          "pause-btn",
+        ].forEach((id) =>
+          document.getElementById(id).classList.remove("active"),
+        );
+        hideInfoPopup();
+      }
+      function updateHUD() {
+        document.getElementById("hud-score").textContent =
+          G.score.toLocaleString();
+        document.getElementById("hud-round").textContent =
+          `Round ${G.round} / ${TOTAL_ROUNDS}`;
+      }
+      function updateLives() {
+        const wrap = document.getElementById("hud-lives");
+        wrap.querySelectorAll(".heart").forEach((h, i) => {
+          h.classList.toggle("lost", i >= G.lives);
+        });
+      }
+      function updateCombo() {
+        const el = document.getElementById("combo-val");
+        el.textContent = "x" + G.combo;
+        const disp = document.getElementById("combo-display");
+        disp.classList.toggle("active", G.combo >= 2 && G.screen === "game");
+        el.style.transform = "scale(1.3)";
+        setTimeout(() => (el.style.transform = "scale(1)"), 150);
+      }
+      function updateTimer() {
+        const pct = Math.max(0, Math.min(1, G.timer / G.timerMax));
+        const bar = document.getElementById("timer-bar");
+        bar.style.width = pct * 100 + "%";
+        bar.classList.toggle("warn", pct <= 0.4 && pct > 0.18);
+        bar.classList.toggle("danger", pct <= 0.18);
+      }
+
+      // ── ROUND BUILD & LAYOUT ─────────────────────────────────
+      function shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      }
+
+      function buildRound(n) {
+        G.round = n;
+        G.roundOver = false;
+        G.previewing = true;
+        G.combo = 0;
+        G.timerAccum = 0;
+        G.particles = [];
+        G.dragCard = null;
+        hideInfoPopup();
+
+        G.ecosystems = n === TOTAL_ROUNDS ? MIXED_ROUND : [ECOSYSTEMS[n - 1]];
+
+        G.slots = [];
+        const all = [];
+        G.ecosystems.forEach((eco, ei) => {
+          eco.organisms.forEach((o, ti) => {
+            all.push({
+              name: o.name,
+              emoji: o.emoji,
+              fact: o.fact,
+              tier: ti,
+              ecoIndex: ei,
+              placed: false,
+              x: 0,
+              y: 0,
+              homeX: 0,
+              homeY: 0,
+              w: CARD_W,
+              h: CARD_H,
+              pop: 0,
+            });
+          });
+        });
+        shuffle(all);
+        G.tray = all;
+
+        const organismCount = all.length;
+        G.timer = 18 + organismCount * 6;
+        G.timerMax = G.timer;
+
+        layoutRound();
+        updateHUD();
+        updateLives();
+        updateCombo();
+        document.getElementById("hud").classList.add("active");
+        document.getElementById("combo-display").classList.add("active");
+        document.getElementById("timer-bar-wrap").classList.add("active");
+        document.getElementById("pause-btn").classList.add("active");
+        showEcoBanner();
+        updateTimer();
+
+        setTimeout(() => {
+          G.previewing = false;
+        }, 2200);
+        saveState();
+      }
+
+      function layoutRound() {
+        const gap = 12;
+        const cardGap = 12;
+        G.slots = [];
+        const slotsByLane = [];
+
+        if (G.ecosystems.length === 1) {
+          const eco = G.ecosystems[0];
+          const n = eco.organisms.length;
+          const totalW = n * CARD_W + (n - 1) * gap;
+          const startX = (G.vw - totalW) / 2;
+          const y = 190;
+          const lane = [];
+          for (let i = 0; i < n; i++) {
+            lane.push({
+              x: startX + i * (CARD_W + gap) + CARD_W / 2,
+              y,
+              w: CARD_W,
+              h: CARD_H,
+              tier: i,
+              ecoIndex: 0,
+              filled: false,
+              card: null,
+            });
+          }
+          slotsByLane.push(lane);
+          G.trayTop = y + CARD_H / 2 + 58;
+        } else {
+          G.ecosystems.forEach((eco, ei) => {
+            const n = eco.organisms.length;
+            const totalW = n * CARD_W + (n - 1) * gap;
+            const startX = (G.vw - totalW) / 2;
+            const y = 160 + ei * 132;
+            const lane = [];
+            for (let i = 0; i < n; i++) {
+              lane.push({
+                x: startX + i * (CARD_W + gap) + CARD_W / 2,
+                y,
+                w: CARD_W,
+                h: CARD_H,
+                tier: i,
+                ecoIndex: ei,
+                filled: false,
+                card: null,
+              });
+            }
+            slotsByLane.push(lane);
+          });
+          G.trayTop = 160 + (G.ecosystems.length - 1) * 132 + CARD_H / 2 + 58;
+        }
+
+        // Re-link any already-placed cards to the freshly positioned slots
+        const flatSlots = [].concat(...slotsByLane);
+        flatSlots.forEach((slot) => {
+          const match = G.tray.find(
+            (c) =>
+              c.placed && c.tier === slot.tier && c.ecoIndex === slot.ecoIndex,
+          );
+          if (match) {
+            slot.filled = true;
+            slot.card = match;
+            match.x = slot.x;
+            match.y = slot.y;
+            match.homeX = slot.x;
+            match.homeY = slot.y;
+          }
+        });
+        G.slots = flatSlots;
+
+        // Tray grid for unplaced cards
+        const unplaced = G.tray.filter((c) => !c.placed);
+        const cols = Math.max(
+          3,
+          Math.min(
+            unplaced.length,
+            Math.floor((G.vw - 40) / (CARD_W + cardGap)),
+          ),
+        );
+        const gridW = cols * (CARD_W + cardGap) - cardGap;
+        const startX = (G.vw - gridW) / 2;
+        unplaced.forEach((card, i) => {
+          const col = i % cols;
+          const row = Math.floor(i / cols);
+          const hx = startX + col * (CARD_W + cardGap) + CARD_W / 2;
+          const hy = G.trayTop + row * (CARD_H + cardGap) + CARD_H / 2;
+          card.homeX = hx;
+          card.homeY = hy;
+          if (card !== G.dragCard) {
+            card.x = hx;
+            card.y = hy;
+          }
+        });
+      }
+
+      function showEcoBanner() {
+        const banner = document.getElementById("eco-banner");
+        if (G.ecosystems.length > 1) {
+          document.getElementById("eco-emoji").textContent =
+            G.ecosystems[0].emoji + " " + G.ecosystems[1].emoji;
+          document.getElementById("eco-name").textContent =
+            G.ecosystems[0].name + " + " + G.ecosystems[1].name;
+          document.getElementById("eco-fact").textContent =
+            "Two food chains at once — sort both!";
+        } else {
+          const eco = G.ecosystems[0];
+          document.getElementById("eco-emoji").textContent = eco.emoji;
+          document.getElementById("eco-name").textContent = eco.name;
+          document.getElementById("eco-fact").textContent =
+            "Sort producer → apex predator";
+        }
+        banner.classList.add("active");
+        requestAnimationFrame(() => banner.classList.add("show"));
+        clearTimeout(G._bannerTimeout);
+        G._bannerTimeout = setTimeout(() => {
+          banner.classList.remove("show");
+        }, 2100);
+      }
+
+      // ── PARTICLES ─────────────────────────────────────────────
+      function spawnParticles(x, y, color, count) {
+        for (let i = 0; i < count; i++) {
+          const ang = Math.random() * Math.PI * 2;
+          const spd = 60 + Math.random() * 140;
+          G.particles.push({
+            x,
+            y,
+            vx: Math.cos(ang) * spd,
+            vy: Math.sin(ang) * spd,
+            life: 1,
+            size: 2 + Math.random() * 3,
+            color,
+          });
+        }
+      }
+      function updateParticles(dt) {
+        for (let i = G.particles.length - 1; i >= 0; i--) {
+          const p = G.particles[i];
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.vy += 220 * dt;
+          p.life -= dt * 1.4;
+          if (p.life <= 0) G.particles.splice(i, 1);
+        }
+      }
+      function drawParticles() {
+        G.particles.forEach((p) => {
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, p.life);
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        });
+      }
+
+      // ── DRAWING ───────────────────────────────────────────────
+      function roundRect(c, x, y, w, h, r) {
+        c.beginPath();
+        c.moveTo(x + r, y);
+        c.arcTo(x + w, y, x + w, y + h, r);
+        c.arcTo(x + w, y + h, x, y + h, r);
+        c.arcTo(x, y + h, x, y, r);
+        c.arcTo(x, y, x + w, y, r);
+        c.closePath();
+      }
+
+      function drawBackground() {
+        let top, bottom;
+        if (G.ecosystems.length > 1) {
+          top = G.ecosystems[0].bg[0];
+          bottom = G.ecosystems[1].bg[1];
+        } else {
+          top = G.ecosystems[0] ? G.ecosystems[0].bg[0] : "#0a0f1e";
+          bottom = G.ecosystems[0] ? G.ecosystems[0].bg[1] : "#0a0f1e";
+        }
+        const grad = ctx.createLinearGradient(0, 0, 0, G.vh);
+        grad.addColorStop(0, top);
+        grad.addColorStop(1, bottom);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, G.vw, G.vh);
+      }
+
+      function drawSlot(slot) {
+        const eco = G.ecosystems[slot.ecoIndex];
+        const label = tierLabel(slot.tier, eco.organisms.length);
+        ctx.save();
+        ctx.translate(slot.x, slot.y);
+        ctx.setLineDash([6, 5]);
+        ctx.strokeStyle = slot.filled ? eco.accent : "rgba(255,255,255,0.22)";
+        ctx.lineWidth = 2;
+        roundRect(ctx, -slot.w / 2, -slot.h / 2, slot.w, slot.h, 12);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        if (!slot.filled) {
+          ctx.fillStyle = "rgba(255,255,255,0.35)";
+          ctx.font = "24px Segoe UI";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("+", 0, -6);
+        }
+        ctx.fillStyle = "rgba(255,255,255,0.5)";
+        ctx.font = "bold 10px Segoe UI";
+        ctx.textAlign = "center";
+        ctx.fillText(label, 0, slot.h / 2 + 16);
+        // Arrow to next slot
+        if (slot.tier < eco.organisms.length - 1) {
+          ctx.fillStyle = "rgba(255,255,255,0.25)";
+          ctx.font = "18px Segoe UI";
+          ctx.fillText("→", slot.w / 2 + 12, 0);
+        }
+        ctx.restore();
+      }
+
+      function drawCard(card) {
+        const eco = G.ecosystems[card.ecoIndex];
+        ctx.save();
+        ctx.translate(card.x, card.y);
+        const isDragging = card === G.dragCard;
+        const scale = isDragging ? 1.08 : 1 + card.pop * 0.15;
+        ctx.scale(scale, scale);
+        if (isDragging) {
+          ctx.shadowColor = "rgba(0,0,0,0.5)";
+          ctx.shadowBlur = 18;
+          ctx.shadowOffsetY = 6;
+        }
+        ctx.fillStyle =
+          card.placed ? "rgba(15,23,42,0.97)" : "rgba(20,28,46,0.97)";
+        ctx.strokeStyle =
+          card.placed ? eco.accent
+          : isDragging ? "#f8fafc"
+          : "rgba(255,255,255,0.18)";
+        ctx.lineWidth = card.placed ? 2.5 : 1.5;
+        roundRect(ctx, -card.w / 2, -card.h / 2, card.w, card.h, 12);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = "38px Segoe UI";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(card.emoji, 0, -14);
+
+        ctx.fillStyle = "#e2e8f0";
+        ctx.font = "bold 13px Segoe UI";
+        ctx.fillText(card.name, 0, card.h / 2 - 18);
+        ctx.restore();
+      }
+
+      function drawFrame(dt) {
+        ctx.save();
+        if (G.screenShake > 0) {
+          const s = G.screenShake;
+          ctx.translate(
+            (Math.random() - 0.5) * s * 14,
+            (Math.random() - 0.5) * s * 14,
+          );
+          G.screenShake = Math.max(0, G.screenShake - dt * 2.4);
+        }
+        drawBackground();
+
+        if (G.screen === "game") {
+          G.slots.forEach(drawSlot);
+          const unplaced = G.tray.filter((c) => !c.placed && c !== G.dragCard);
+          unplaced.forEach((c) => {
+            if (c.pop > 0) c.pop = Math.max(0, c.pop - dt * 3);
+            drawCard(c);
+          });
+          const placed = G.tray.filter((c) => c.placed);
+          placed.forEach((c) => {
+            if (c.pop > 0) c.pop = Math.max(0, c.pop - dt * 3);
+            drawCard(c);
+          });
+          if (G.dragCard) drawCard(G.dragCard);
+        }
+
+        updateParticles(dt);
+        drawParticles();
+        ctx.restore();
+      }
+
+      // ── POINTER / DRAG HANDLING ───────────────────────────────
+      function pointerPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const p = e.touches ? e.touches[0] : e;
+        return { x: p.clientX - rect.left, y: p.clientY - rect.top };
+      }
+      function hitTestCard(mx, my) {
+        for (let i = G.tray.length - 1; i >= 0; i--) {
+          const c = G.tray[i];
+          if (c.placed) continue;
+          if (
+            mx >= c.x - c.w / 2 &&
+            mx <= c.x + c.w / 2 &&
+            my >= c.y - c.h / 2 &&
+            my <= c.y + c.h / 2
+          )
+            return c;
+        }
+        return null;
+      }
+      function hitTestSlot(mx, my) {
+        for (const s of G.slots) {
+          if (
+            mx >= s.x - s.w / 2 &&
+            mx <= s.x + s.w / 2 &&
+            my >= s.y - s.h / 2 &&
+            my <= s.y + s.h / 2
+          )
+            return s;
+        }
+        return null;
+      }
+
+      function onPointerDown(e) {
+        if (G.paused || G.screen !== "game" || G.roundOver || G.previewing)
+          return;
+        const { x, y } = pointerPos(e);
+        const card = hitTestCard(x, y);
+        if (card) {
+          e.preventDefault();
+          G.dragCard = card;
+          G.dragOffX = x - card.x;
+          G.dragOffY = y - card.y;
+          playSound("pick");
+        } else {
+          // tap on an already-placed card → show its info popup
+          for (const s of G.slots) {
+            if (
+              s.filled &&
+              x >= s.x - s.w / 2 &&
+              x <= s.x + s.w / 2 &&
+              y >= s.y - s.h / 2 &&
+              y <= s.y + s.h / 2
+            ) {
+              showInfoPopup(s.card);
+              break;
+            }
+          }
+        }
+      }
+      function onPointerMove(e) {
+        if (!G.dragCard) return;
+        e.preventDefault();
+        const { x, y } = pointerPos(e);
+        G.dragCard.x = x - G.dragOffX;
+        G.dragCard.y = y - G.dragOffY;
+      }
+      function onPointerUp(e) {
+        if (!G.dragCard) return;
+        const card = G.dragCard;
+        const slot = hitTestSlot(card.x, card.y);
+        if (slot && !slot.filled) {
+          if (slot.tier === card.tier && slot.ecoIndex === card.ecoIndex) {
+            slot.filled = true;
+            slot.card = card;
+            card.placed = true;
+            card.x = slot.x;
+            card.y = slot.y;
+            card.pop = 1;
+            G.combo++;
+            if (G.combo > G.bestCombo) G.bestCombo = G.combo;
+            const pts = 60 * G.combo + G.round * 12;
+            G.score += pts;
+            const eco = G.ecosystems[slot.ecoIndex];
+            spawnParticles(slot.x, slot.y, eco.accent, 20);
+            playSound(G.combo >= 3 ? "combo" : "correct");
+            updateHUD();
+            updateCombo();
+            checkRoundComplete();
+          } else {
+            G.combo = 0;
+            updateCombo();
+            G.lives--;
+            G.mistakes++;
+            updateLives();
+            playSound("wrong");
+            G.screenShake = 0.5;
+            card.x = card.homeX;
+            card.y = card.homeY;
+            if (G.lives <= 0) {
+              G.roundOver = true;
+              setTimeout(() => finishToGameOver(), 700);
+            }
+          }
+        } else {
+          card.x = card.homeX;
+          card.y = card.homeY;
+        }
+        G.dragCard = null;
+        saveState();
+      }
+      canvas.addEventListener("mousedown", onPointerDown);
+      window.addEventListener("mousemove", onPointerMove);
+      window.addEventListener("mouseup", onPointerUp);
+      canvas.addEventListener("touchstart", onPointerDown, { passive: false });
+      window.addEventListener("touchmove", onPointerMove, { passive: false });
+      window.addEventListener("touchend", onPointerUp);
+
+      // ── INFO POPUP ────────────────────────────────────────────
+      function showInfoPopup(card) {
+        const info = ORGANISM_INFO[card.name];
+        document.getElementById("info-name").textContent = card.name;
+        document.getElementById("info-fact").textContent =
+          (info && info.fact) || card.fact;
+        const img = document.getElementById("info-img");
+        const emoji = document.getElementById("info-emoji");
+        if (info && info.img) {
+          img.src = info.img;
+          img.style.display = "block";
+          emoji.style.display = "none";
+        } else {
+          img.style.display = "none";
+          emoji.style.display = "block";
+          emoji.textContent = card.emoji;
+        }
+        document.getElementById("info-popup").classList.add("active");
+      }
+      function hideInfoPopup() {
+        document.getElementById("info-popup").classList.remove("active");
+      }
+
+      // ── ROUND / GAME FLOW ─────────────────────────────────────
+      function checkRoundComplete() {
+        if (G.slots.every((s) => s.filled)) {
+          G.roundOver = true;
+          G.score += Math.round(G.timer * 3);
+          updateHUD();
+          playSound("win");
+          setTimeout(() => advanceRound(), 1000);
+        }
+      }
+
+      function advanceRound() {
+        if (G.lives <= 0) {
+          finishToGameOver();
+          return;
+        }
+        if (G.round >= TOTAL_ROUNDS) {
+          finishToVictory();
+          return;
+        }
+        buildRound(G.round + 1);
+      }
+
+      function finishToVictory() {
+        G.screen = "end";
+        hideGameUI();
+        clearSave();
+        document.getElementById("end-score").textContent =
+          G.score.toLocaleString();
+        document.getElementById("end-combo").textContent = "x" + G.bestCombo;
+        document.getElementById("end-mistakes").textContent = G.mistakes;
+        const stars =
+          G.bestCombo >= 8 ? 3
+          : G.bestCombo >= 5 ? 2
+          : G.bestCombo >= 3 ? 1
+          : 0;
+        ["star1", "star2", "star3"].forEach((id, i) => {
+          const el = document.getElementById(id);
+          el.classList.remove("lit");
+          if (i < stars)
+            setTimeout(() => el.classList.add("lit"), 300 + i * 380);
+        });
+        playSound("win");
+        showScreen("end-screen");
+      }
+
+      function finishToGameOver() {
+        G.screen = "gameover";
+        hideGameUI();
+        clearSave();
+        document.getElementById("go-score").textContent =
+          G.score.toLocaleString();
+        document.getElementById("go-combo").textContent = "x" + G.bestCombo;
+        document.getElementById("go-round").textContent = G.round;
+        document.getElementById("gameover-sub").textContent =
+          `You made it to Round ${G.round} of ${TOTAL_ROUNDS}.`;
+        playSound("lose");
+        showScreen("gameover-screen");
+      }
+
+      function startGame() {
+        G.round = 1;
+        G.lives = 3;
+        G.score = 0;
+        G.bestCombo = 0;
+        G.mistakes = 0;
+        G.paused = false;
+        G.screen = "game";
+        document
+          .querySelectorAll(".screen")
+          .forEach((s) => s.classList.remove("active"));
+        audioCtx.resume();
+        buildRound(1);
+      }
+
+      function resetToStart() {
+        clearSave();
+        G.screen = "start";
+        G.paused = false;
+        document.getElementById("pause-overlay").classList.remove("active");
+        showScreen("start-screen");
+      }
+
+      // ── PAUSE / AUTO-PAUSE ────────────────────────────────────
+      function togglePause() {
+        if (G.screen !== "game") return;
+        G.paused = !G.paused;
+        document
+          .getElementById("pause-overlay")
+          .classList.toggle("active", G.paused);
+        if (!G.paused) saveState();
+      }
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden && G.screen === "game" && !G.paused) {
+          G.paused = true;
+          document.getElementById("pause-overlay").classList.add("active");
+          saveState();
+        }
+      });
+
+      // ── SAVE / RESTORE (lightweight — resumes at the round level) ──
+      function saveState() {
+        if (G.screen !== "game") return;
+        try {
+          localStorage.setItem(
+            SAVE_KEY,
+            JSON.stringify({
+              round: G.round,
+              lives: G.lives,
+              score: G.score,
+              bestCombo: G.bestCombo,
+              mistakes: G.mistakes,
+            }),
+          );
+        } catch (e) {}
+      }
+      function clearSave() {
+        try {
+          localStorage.removeItem(SAVE_KEY);
+        } catch (e) {}
+      }
+      function hasSave() {
+        try {
+          return !!localStorage.getItem(SAVE_KEY);
+        } catch (e) {
+          return false;
+        }
+      }
+      function continueGame() {
+        try {
+          const save = JSON.parse(localStorage.getItem(SAVE_KEY));
+          if (!save) return startGame();
+          G.lives = save.lives;
+          G.score = save.score;
+          G.bestCombo = save.bestCombo;
+          G.mistakes = save.mistakes;
+          G.paused = false;
+          G.screen = "game";
+          document
+            .querySelectorAll(".screen")
+            .forEach((s) => s.classList.remove("active"));
+          audioCtx.resume();
+          buildRound(save.round);
+        } catch (e) {
+          startGame();
+        }
+      }
+
+      // ── ROUND PLAN CHIPS (start screen) ───────────────────────
+      function renderRoundPlan() {
+        const wrap = document.getElementById("round-plan");
+        ECOSYSTEMS.forEach((eco, i) => {
+          const chip = document.createElement("span");
+          chip.className = "round-chip";
+          chip.textContent = `${i + 1}. ${eco.emoji} ${eco.name} (${eco.organisms.length})`;
+          wrap.appendChild(chip);
+        });
+        const mix = document.createElement("span");
+        mix.className = "round-chip";
+        mix.textContent = "10. 🦁🌑 Mixed (6+6)";
+        wrap.appendChild(mix);
+      }
+
+      // ── GAME LOOP ─────────────────────────────────────────────
+      function gameLoop(ts) {
+        const dt = Math.min(0.05, (ts - (G.lastTime || ts)) / 1000);
+        G.lastTime = ts;
+
+        if (G.screen === "game" && !G.paused && !G.roundOver && !G.previewing) {
+          G.timerAccum += dt;
+          if (G.timerAccum >= 0.1) {
+            G.timer = Math.max(0, G.timer - G.timerAccum);
+            G.timerAccum = 0;
+            updateTimer();
+            if (G.timer <= 0) {
+              G.lives--;
+              G.mistakes++;
+              updateLives();
+              playSound("wrong");
+              G.screenShake = 0.5;
+              if (G.lives <= 0) {
+                G.roundOver = true;
+                setTimeout(() => finishToGameOver(), 700);
+              } else {
+                G.timer = TIMER_GRACE;
+                G.timerMax = Math.max(G.timerMax, TIMER_GRACE);
+              }
+            }
+          }
+        }
+
+        drawFrame(G.paused ? 0 : dt);
+        requestAnimationFrame(gameLoop);
+      }
+
+      // ── BOOT ────────────────────────────────────────────────
+      renderRoundPlan();
+      resize();
+      G.lastTime = performance.now();
+      requestAnimationFrame(gameLoop);
+      if (hasSave()) {
+        document.getElementById("continue-btn").style.display = "inline-block";
+      }
+      fetchEcosystemData(); // background enrichment; game is playable immediately
+    </script>
+  </body>
+</html>
